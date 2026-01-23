@@ -3212,6 +3212,14 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 												)
 											end
 										end
+										
+										if not ldecompile then
+											warn("ldecompile is nil! Initializing default...")
+											ldecompile = function()
+												return "-- Decompiler not initialized"
+											end
+										end
+										value = ldecompile(instance)
 
 										if should_decompile then
 											local isLocalScript = instance:IsA("LocalScript")
