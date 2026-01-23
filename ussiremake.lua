@@ -1,9 +1,4 @@
--- archived
-
---!native
---!optimize 2
---!divine-intellect
--- https://discord.gg/wx4ThpAsmw
+--! adolfus nabludaet za vami
 
 local realcheck = true
 local imagonnaaddmorecheck, _ = pcall(function()
@@ -2031,29 +2026,6 @@ local GLOBAL_ENV = getgenv and getgenv() or _G or shared
 	@param Parameter_2 table -- [OPTIONAL] If present, then Parameter_2 will be assumed to be [SynSaveInstance.CustomOptions table]. And then if the Parameter_1 is an Instance, then it will be assumed to be [SynSaveInstance.CustomOptions table].Object. If Parameter_1 is a table filled with instances ({Instance}), then it will be assumed to be [SynSaveInstance.CustomOptions table].ExtraInstances and IsModel will be true). This exists for sake compatibility with `saveinstance(game, {})`
 ]=]
 
-local function comment_goto_and_labels(code)
-	local lines = string.split(code, "\n")
-	local result_lines = {}
-	local changed = false
-
-	for i, line in ipairs(lines) do
-		local trimmed = line:match("^%s*(.*)")
-		if trimmed and not trimmed:match("^--") then
-			if trimmed:match("%f[%w]goto%f[%W]") or trimmed:match("::[%w_]+::") then
-				line = "-- " .. line
-				changed = true
-			end
-		end
-		table.insert(result_lines, line)
-	end
-
-	if changed then
-		code = table.concat(result_lines, "\n")
-	end
-
-	return code
-end
-
 local function synsaveinstance(CustomOptions, CustomOptions2)
 	if GLOBAL_ENV.USSI then
 		return
@@ -2659,7 +2631,8 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 		elseif Decompiler then
 			local decomp = construct_TimeoutHandler(Timeout, Decompiler, "Decompiler timed out")
 
-			local function ldecompile(script)
+			ldecompile = function(script)
+				-- local name = scr.ClassName .. scr.Name
 				local hashed_bytecode
 				if ScriptCache then
 					local s, bytecode = getbytecode(script)
@@ -2684,7 +2657,7 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 						return "-- Not found in already decompiled ScriptCache"
 					end
 
-					task.wait()
+					task.wait() -- TODO Maybe remove?
 				end
 
 				local ok, result = run_with_loading("Decompiling " .. script.Name, true, nil, decomp, script)
@@ -2694,15 +2667,14 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 
 				local output
 				if ok then
-					result = string.gsub(result, "\0", "\\0")
+					result = string.gsub(result, "\0", "\\0") -- ? Some decompilers sadly output \0 which prevents files from opening
 					output = result
-					output = comment_goto_and_labels(output)
 				else
 					output = "--[[ Failed to decompile. Reason:\n" .. (result or "") .. "\n]]"
 				end
 
-				if ScriptCache and hashed_bytecode then
-					ldeccache[hashed_bytecode] = output
+				if ScriptCache and hashed_bytecode then -- TODO there might(?) be an edgecase where it manages to decompile (built-in) even though getscriptbytecode failed, and the output won't get cached
+					ldeccache[hashed_bytecode] = output -- ? Should we cache even if it timed out?
 					if __DEBUG_MODE then
 						__DEBUG_MODE("Cached", script:GetFullName())
 					end
@@ -3194,7 +3166,6 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 													end)
 
 													if ok and filterLinkedSource(source) then
-														source = comment_goto_and_labels(source)
 														if ScriptCache then
 															ldeccache[LinkedSource] = source
 														end
@@ -3212,14 +3183,6 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 												)
 											end
 										end
-										
-										if not ldecompile then
-											warn("ldecompile is nil! Initializing default...")
-											ldecompile = function()
-												return "-- Decompiler not initialized"
-											end
-										end
-										value = ldecompile(instance)
 
 										if should_decompile then
 											local isLocalScript = instance:IsA("LocalScript")
