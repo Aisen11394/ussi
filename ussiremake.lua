@@ -15,27 +15,47 @@ local string = string
 local math = math
 local tonumber = tonumber
 local function to_base64(data)
-	local result, bit_table = {}, {}
-	for i = 1, #data do
-		local byte = data:byte(i)
-		local bits = {}
-		for j = 7, 0, -1 do
-			bits[#bits + 1] = (math.floor(byte / (2 ^ j)) % 2 == 1) and '1' or '0'
-		end
-		bit_table[#bit_table + 1] = table.concat(bits)
-	end
-
-	local bit_string = table.concat(bit_table)
-	bit_string = bit_string .. string.rep('0', (6 - #bit_string % 6) % 6)
-
-	for i = 1, #bit_string, 6 do
-		local chunk = bit_string:sub(i, i + 5)
-		local index = tonumber(chunk, 2) + 1
-		result[#result + 1] = b:sub(index, index)
-	end
-
-	local padding = (#data % 3 == 1 and '==') or (#data % 3 == 2 and '=' or '')
-	return table.concat(result) .. padding
+    local alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+    local result = {}
+    local padding = ""
+    
+    for i = 1, #data, 3 do
+        local b1, b2, b3 = data:byte(i, i + 2)
+        local chunk
+        
+        if b3 then
+            chunk = (b1 << 16) | (b2 << 8) | b3
+            local c1 = (chunk >> 18) & 0x3F
+            local c2 = (chunk >> 12) & 0x3F
+            local c3 = (chunk >> 6) & 0x3F
+            local c4 = chunk & 0x3F
+            
+            result[#result + 1] = alphabet:sub(c1 + 1, c1 + 1)
+            result[#result + 1] = alphabet:sub(c2 + 1, c2 + 1)
+            result[#result + 1] = alphabet:sub(c3 + 1, c3 + 1)
+            result[#result + 1] = alphabet:sub(c4 + 1, c4 + 1)
+        elseif b2 then
+            chunk = (b1 << 10) | (b2 << 2)
+            local c1 = (chunk >> 12) & 0x3F
+            local c2 = (chunk >> 6) & 0x3F
+            local c3 = chunk & 0x3F
+            
+            result[#result + 1] = alphabet:sub(c1 + 1, c1 + 1)
+            result[#result + 1] = alphabet:sub(c2 + 1, c2 + 1)
+            result[#result + 1] = alphabet:sub(c3 + 1, c3 + 1)
+            padding = "="
+        else
+            chunk = b1 << 4
+            local c1 = (chunk >> 6) & 0x3F
+            local c2 = chunk & 0x3F
+            
+            result[#result + 1] = alphabet:sub(c1 + 1, c1 + 1)
+            result[#result + 1] = alphabet:sub(c2 + 1, c2 + 1)
+            padding = "=="
+        end
+    end
+    
+    return table.concat(result) .. padding
 end
 
 if gethiddenproperty and realcheck then
