@@ -3776,4 +3776,4 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 	end
 end
 
-return synsaveinstance что тут можно улучшить?
+return synsaveinstance
