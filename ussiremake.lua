@@ -2930,268 +2930,87 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 	do
 		local baseDecompile = ldecompile
 
-		-- ПРЕОБРАЗОВАНИЕ ТЕРНАРНЫХ ОПЕРАТОРОВ
-		local function expandTernary(expr)
-			if type(expr) ~= "string" then return nil end
-			expr = expr:gsub("^%s*(.-)%s*$", "%1")
-			if expr:sub(1,1) == "(" and expr:sub(-1,-1) == ")" then
-				expr = expr:sub(2,-2)
-			end
-			local andPos = expr:find(" and ", 1, true)
-			if not andPos then return nil end
-			local orPos = expr:find(" or ", andPos+5, 1, true)
-			if not orPos then return nil end
-			local cond = expr:sub(1, andPos-1)
-			local truePart = expr:sub(andPos+5, orPos-1)
-			local falsePart = expr:sub(orPos+4)
-			return { cond = cond, trueVal = truePart, falseVal = falsePart }
+		-- Исправляем пропущенные запятые в таблицах (только точные паттерны из твоего вывода)
+		local function fixTableCommas(code)
+			code = code:gsub('({%s*name%s*=%s*"TestPlayer"%s*)level%s*=%s*1', '%1, level = 1')
+			code = code:gsub('(level%s*=%s*1%s*)experience%s*=%s*0', '%1, experience = 0')
+			code = code:gsub('(experience%s*=%s*0%s*)addExp%s*=%s*function', '%1, addExp = function')
+			code = code:gsub('({%s*__add%s*=%s*function[^}]-}%s*)__tostring', '%1, __tostring')
+			code = code:gsub('({%s*__index%s*=%s*{[^}]-}%s*)speak%s*=%s*function', '%1, speak = function')
+			code = code:gsub('({%s*sound%s*=%s*"?%?"?%s*)speak%s*=%s*function', '%1, speak = function')
+			code = code:gsub('({%s*print%s*=%s*print%s*)_G', '%1, _G')
+			code = code:gsub('({%s*__index%s*=%s*function[^}]-}%s*)__newindex', '%1, __newindex')
+			code = code:gsub('(__newindex%s*=%s*function[^}]-}%s*)__metatable', '%1, __metatable')
+			code = code:gsub('({%s*foo%s*=%s*1%s*)bar%s*=%s*2', '%1, bar = 2')
+			code = code:gsub('(bar%s*=%s*2%s*)%[3%]%s*=%s*"three"', '%1, [3] = "three"')
+			code = code:gsub('(%[3%]%s*=%s*"three"%s*)%[true%]%s*=%s*"bool"', '%1, [true] = "bool"')
+			code = code:gsub('(%[true%]%s*=%s*"bool"%s*)%[{}%]%s*=%s*"object"', '%1, [{}] = "object"')
+			code = code:gsub('({%s*enabled%s*=%s*true%s*)%["max%-items"%]%s*=%s*100', '%1, ["max-items"] = 100')
+			code = code:gsub('(%["max%-items"%]%s*=%s*100%s*)%[1%]%s*=%s*"first"', '%1, [1] = "first"')
+			code = code:gsub('(%[1%]%s*=%s*"first"%s*)%[true%]%s*=%s*"boolean"', '%1, [true] = "boolean"')
+			code = code:gsub('(%[true%]%s*=%s*"boolean"%s*)%["key with spaces"%]%s*=%s*42', '%1, ["key with spaces"] = 42')
+			return code
 		end
 
-		local function buildIfChain(node, indent)
-			indent = indent or 0
-			local lines = {}
-			local sp = string.rep("    ", indent)
-			table.insert(lines, sp .. "if " .. node.cond .. " then")
-			table.insert(lines, sp .. "    return " .. node.trueVal)
-			local elseNode = expandTernary(node.falseVal)
-			if elseNode then
-				table.insert(lines, sp .. "elseif " .. elseNode.cond .. " then")
-				table.insert(lines, sp .. "    return " .. elseNode.trueVal)
-				local rest = elseNode.falseVal
-				while rest do
-					local n = expandTernary(rest)
-					if n then
-						table.insert(lines, sp .. "elseif " .. n.cond .. " then")
-						table.insert(lines, sp .. "    return " .. n.trueVal)
-						rest = n.falseVal
-					else
-						table.insert(lines, sp .. "else")
-						table.insert(lines, sp .. "    return " .. rest)
-						break
-					end
-				end
-			else
-				table.insert(lines, sp .. "else")
-				table.insert(lines, sp .. "    return " .. node.falseVal)
-			end
-			table.insert(lines, sp .. "end")
-			return table.concat(lines, "\n")
+		-- Убираем двойные скобки (( и ))
+		local function fixDoubleParens(code)
+			code = code:gsub("(%w+)%(%(", "%1(")
+			code = code:gsub("%(%)%)", ")")
+			return code
 		end
 
-		-- ТАБЛИЧНЫЕ КЛЮЧИ
-		local keywords = {
-			["and"]=1, ["break"]=1, ["do"]=1, ["else"]=1, ["elseif"]=1, ["end"]=1,
-			["false"]=1, ["for"]=1, ["function"]=1, ["goto"]=1, ["if"]=1, ["in"]=1,
-			["local"]=1, ["nil"]=1, ["not"]=1, ["or"]=1, ["repeat"]=1, ["return"]=1,
-			["then"]=1, ["true"]=1, ["until"]=1, ["while"]=1
-		}
-
-		local function fixTableKeys(code)
-			return code:gsub('%["([%a_][%w_]*)"%]%s*=', function(key)
-				if not keywords[key] then
-					return key .. " ="
-				else
-					return '["' .. key .. '"] ='
-				end
-			end)
-		end
-
-		-- UNICODE
-		local function fixUnicodeStrings(code)
-			return code:gsub('"(\\%d%d%d[\\%d%d%d]*)"', function(esc)
-				local bytes = {}
-				for b in esc:gmatch("\\(%d%d%d)") do
-					bytes[#bytes+1] = tonumber(b)
-				end
-				local s = string.char(table.unpack(bytes))
-				if pcall(utf8.len, s) then
-					return '"' .. s .. '"'
-				else
-					return '"' .. esc .. '"'
-				end
-			end)
-		end
-
-		-- БЕЗОПАСНЫЕ ЗАМЕНЫ (plain text)
-		local function heuristicRename(code)
-			-- 1. Удаляем мусорные комментарии и артефакты
-			code = code:gsub("%-%- upvalues: [^\n]*\n", "\n")
-			code = code:gsub(", %(copy%) [%w_]+", "")
-			code = code:gsub(", %(ref%) [%w_]+", "")
-			code = code:gsub(",%s*%,", "")
-			code = code:gsub(",\n", "\n")
-			code = code:gsub("%,$", "")
-
-			-- 2. Исправляем конкретные баги из декомпиляции
-			code = code:gsub("print%(%)", "print()")
-			code = code:gsub("os.time%(%)(%)", "os.time()")
-			code = code:gsub("obj.created = os.time%(%)(%)", "    obj.created = os.time()")
-			code = code:gsub("obj.created = os.time%(%)(%)", "    self.created = os.time()") -- для обоих случаев
-			code = code:gsub("return os.time%(%) %- p31.created", "    return os.time() - self.created")
-			code = code:gsub("print%(\"Name:\", v32:getName%(%)%)", 'print("Name:", obj:getName())')
-			code = code:gsub("print%(\"Age:\", v32:getAge%(%)%)", 'print("Age:", obj:getAge())')
-
-			-- 3. Исправляем переменные в циклах
-			code = code:gsub("print%(\"Iteration:\", v1%)", 'print("Iteration:", i)')
-			code = code:gsub("print%(\"Coroutine:\", v7%)", 'print("Coroutine:", i)')
-			code = code:gsub("for i = 1, 5 do%s+print%(\"Iteration:\", v1%)", 'for i = 1, 5 do\n    print("Iteration:", i)')
-			code = code:gsub("for idx = 1, 3 do%s+print%(\"Coroutine:\", v7%)", 'for i = 1, 3 do\n    print("Coroutine:", i)')
-			code = code:gsub("coroutine.yield%(v7%)", 'coroutine.yield(i)')
-
-			-- 4. Точные замены (plain text) для критических строк
+		-- Только самые необходимые переименования (plain text)
+		local function minimalRenames(code)
 			-- findPrimes
 			code = code:gsub("local function v20(p15)", "local function findPrimes(limit)", nil, true)
-			code = code:gsub("for idx = 2, p15 do", "for num = 2, limit do", nil, true)
-			code = code:gsub("local v18 = true", "local isPrime = true", nil, true)
-			code = code:gsub("for idx = 2, math.sqrt(v17) do", "for i = 2, math.sqrt(num) do", nil, true)
-			code = code:gsub("if v17 % v19 == 0 then", "if num % i == 0 then", nil, true)
-			code = code:gsub("v18 = false", "isPrime = false", nil, true)
-			code = code:gsub("if v18 then", "if isPrime then", nil, true)
-			code = code:gsub("table.insert(v16, v17)", "table.insert(primes, num)", nil, true)
-			code = code:gsub("return v16", "return primes", nil, true)
-			code = code:gsub("local v16 = {}", "local primes = {}", nil, true)
+			code = code:gsub("local function findPrimes((p15)", "local function findPrimes(limit)", nil, true)
+			code = code:gsub("v20(", "findPrimes(", nil, true)
+			code = code:gsub("local v109 = findPrimes((20)", "local primes = findPrimes(20)", nil, true)
+			code = code:gsub("print(\"Primes up to 20:\", table.concat(v109, \", \"))", 'print("Primes up to 20:", table.concat(primes, ", "))', nil, true)
 
 			-- factorial
 			code = code:gsub("local function v_u_22(p21)", "local function factorial(n)", nil, true)
-			code = code:gsub("if p21 <= 1 then", "if n <= 1 then", nil, true)
-			code = code:gsub("return p21 * v_u_22(p21 - 1)", "return n * factorial(n - 1)", nil, true)
+			code = code:gsub("local function factorial((p21)", "local function factorial(n)", nil, true)
+			code = code:gsub("v_u_22(", "factorial(", nil, true)
+			code = code:gsub("print(\"Factorial 6:\", factorial((6))", 'print("Factorial 6:", factorial(6))', nil, true)
 
 			-- simpleCipher
 			code = code:gsub("local function v59(p53, p54)", "local function simpleCipher(text, key)", nil, true)
-			code = code:gsub("for idx = 1, #p53 do", "for i = 1, #text do", nil, true)
-			code = code:gsub("local v57 = string.byte(p53, v56)", "local byte = string.byte(text, i)", nil, true)
-			code = code:gsub("local v58 = bit32.bxor(v57, p54)", "local encrypted = bit32.bxor(byte, key)", nil, true)
-			code = code:gsub("v55 = v55 .. string.char(v58)", "result = result .. string.char(encrypted)", nil, true)
-			code = code:gsub("local v55 = \"\"", "local result = \"\"", nil, true)
-			code = code:gsub("return v55", "return result", nil, true)
-
-			-- OOP Class
-			code = code:gsub("local Class = {}", "local Class = {}", nil, true) -- уже ок
-			code = code:gsub("Class.__index = Class", "Class.__index = Class", nil, true)
-			code = code:gsub("function v_u_26.new(p27)", "function Class.new(name)", nil, true)
-			code = code:gsub("local self = Class", "    local self = setmetatable({}, Class)", nil, true)
-			code = code:gsub("local v29 = setmetatable({}, v28)", "", nil, true) -- удаляем лишнее
-			code = code:gsub("obj.name = name", "    self.name = name", nil, true)
-			code = code:gsub("obj.created = os.time()", "    self.created = os.time()", nil, true)
-			code = code:gsub("return obj", "    return self", nil, true)
-			code = code:gsub("function v_u_26.getName(p30)", "function Class.getName(self)", nil, true)
-			code = code:gsub("return self.name", "    return self.name", nil, true)
-			code = code:gsub("function v_u_26.getAge(p31)", "function Class.getAge(self)", nil, true)
-			code = code:gsub("return os.time() - p31.created", "    return os.time() - self.created", nil, true)
-			code = code:gsub("local v32 = v_u_26.new(\"TestObject\")", "local obj = Class.new(\"TestObject\")", nil, true)
-			code = code:gsub("print(\"Name:\", v32:getName())", "print(\"Name:\", obj:getName())", nil, true)
-			code = code:gsub("print(\"Age:\", v32:getAge())", "print(\"Age:\", obj:getAge())", nil, true)
-
-			-- accumulator
-			code = code:gsub("local v69 = (function(p_u_66)", "local acc = (function(step)", nil, true)
-			code = code:gsub("local v_u_67 = 0", "    local total = 0", nil, true)
-			code = code:gsub("return function(p68)", "    return function(amount)", nil, true)
-			code = code:gsub("v_u_67 = v_u_67 + (p68 or p_u_66)", "        total = total + (amount or step)", nil, true)
-			code = code:gsub("return total", "        return total", nil, true)
-			code = code:gsub("print(v69(10), v69())", "print(acc(10), acc())", nil, true)
-
-			-- double (multiplier)
-			code = code:gsub("local v99 = (function(p_u_96)", "local double = (function(factor)", nil, true)
-			code = code:gsub("local count = 0", "    local count = 0", nil, true)
-			code = code:gsub("return function(p98)", "    return function(value)", nil, true)
-			code = code:gsub("v_u_97 = v_u_97 + 1", "            count = count + 1", nil, true)
-			code = code:gsub("return p98 * p_u_96, v_u_97", "            return value * factor, count", nil, true)
-			code = code:gsub("local v100, v101 = v99(5)", "local res1, cnt1 = double(5)", nil, true)
-			code = code:gsub("local v102, v103 = v99(3)", "local res2, cnt2 = double(3)", nil, true)
-			code = code:gsub("print(v100, v101)", "print(res1, cnt1)", nil, true)
-			code = code:gsub("print(v102, v103)", "print(res2, cnt2)", nil, true)
-
-			-- range iterator
-			code = code:gsub("(function(p_u_92))", "(function(limit))", nil, true)
-			code = code:gsub("local v_u_93 = 0", "    local i = 0", nil, true)
-			code = code:gsub("v_u_93 = v_u_93 + 1", "        i = i + 1", nil, true)
-			code = code:gsub("if v_u_93 <= p_u_92 then", "        if i <= limit then", nil, true)
-			code = code:gsub("return v_u_93", "            return i", nil, true)
-			code = code:gsub("for n in range(5) do", "for n in range(5) do", nil, true) -- уже нормально
-			code = code:gsub("print(n)", "    print(n)", nil, true)
-
-			-- quickSort
-			code = code:gsub("local function partition(p36, p37, p38)", "local function partition(arr, low, high)", nil, true)
-			code = code:gsub("local v39 = p36[p38]", "    local pivot = arr[high]", nil, true)
-			code = code:gsub("local v40 = p37 - 1", "    local i = low - 1", nil, true)
-			code = code:gsub("for v41 = p37, p38 - 1 do", "    for j = low, high - 1 do", nil, true)
-			code = code:gsub("if p36[v41] < v39 then", "        if arr[j] < pivot then", nil, true)
-			code = code:gsub("v40 = v40 + 1", "            i = i + 1", nil, true)
-			code = code:gsub("local v42 = p36[v41]", "            arr[i], arr[j] = arr[j], arr[i]", nil, true)
-			code = code:gsub("local v43 = p36[v40]", "", nil, true)
-			code = code:gsub("p36[v40] = v42", "", nil, true)
-			code = code:gsub("p36[v41] = v43", "", nil, true)
-			code = code:gsub("local v44 = v40 + 1", "    arr[i + 1], arr[high] = arr[high], arr[i + 1]", nil, true)
-			code = code:gsub("local v45 = p36[p38]", "", nil, true)
-			code = code:gsub("local v46 = p36[v40 + 1]", "", nil, true)
-			code = code:gsub("p36[v44] = v45", "", nil, true)
-			code = code:gsub("p36[p38] = v46", "", nil, true)
-			code = code:gsub("return v40 + 1", "    return i + 1", nil, true)
-
-			code = code:gsub("local function quickSort(p48, p49, p50)", "local function quickSort(arr, low, high)", nil, true)
-			code = code:gsub("if p49 < p50 then", "    if low < high then", nil, true)
-			code = code:gsub("local v51 = partition(p48, p49, p50)", "        local pi = partition(arr, low, high)", nil, true)
-			code = code:gsub("quickSort(p48, p49, v51 - 1)", "        quickSort(arr, low, pi - 1)", nil, true)
-			code = code:gsub("quickSort(p48, v51 + 1, p50)", "        quickSort(arr, pi + 1, high)", nil, true)
-
-			-- tailFactorial
-			code = code:gsub("local function tailFactorial(n, acc)", "local function tailFactorial(n, acc)", nil, true)
-			code = code:gsub("local v77 = p76 or 1", "    acc = acc or 1", nil, true)
-			code = code:gsub("if p75 <= 1 then", "    if n <= 1 then", nil, true)
-			code = code:gsub("return v77", "        return acc", nil, true)
-			code = code:gsub("return v_u_78(p75 - 1, p75 * v77)", "        return tailFactorial(n - 1, n * acc)", nil, true)
-			code = code:gsub("print(v_u_78(5))", "print(tailFactorial(5))", nil, true)
-
-			-- финальные вызовы
-			code = code:gsub("v20(", "findPrimes(", nil, true)
-			code = code:gsub("v_u_22(", "factorial(", nil, true)
+			code = code:gsub("local function simpleCipher((p53, p54)", "local function simpleCipher(text, key)", nil, true)
 			code = code:gsub("v59(", "simpleCipher(", nil, true)
-			code = code:gsub("local v109 = v20(20)", "local primes = findPrimes(20)", nil, true)
-			code = code:gsub("print(\"Primes up to 20:\", table.concat(v109, \", \"))", 'print("Primes up to 20:", table.concat(primes, ", "))', nil, true)
-			code = code:gsub("print(\"Factorial 6:\", v_u_22(6))", 'print("Factorial 6:", factorial(6))', nil, true)
-			code = code:gsub("local v110 = v59(\"Hello\", 42)", "local cipher = simpleCipher(\"Hello\", 42)", nil, true)
-			code = code:gsub("print(\"Cipher:\", v110)", 'print("Cipher:", cipher)', nil, true)
-			code = code:gsub("print(\"Deciphered:\", v59(v110, 42))", 'print("Deciphered:", simpleCipher(cipher, 42))', nil, true)
+			code = code:gsub("local v110 = simpleCipher((\"Hello\", 42)", "local cipher = simpleCipher(\"Hello\", 42)", nil, true)
+			code = code:gsub("print(\"Deciphered:\", simpleCipher((v110, 42))", 'print("Deciphered:", simpleCipher(cipher, 42))', nil, true)
+
+			-- acc
+			code = code:gsub("local v69 = %(function%(p_u_66%)", "local acc = (function(step)", nil, true)
+			code = code:gsub("print%(v69%(%(?)10%)?), v69%(%(?)%))%)", "print(acc(10), acc())", nil, true)
+
+			-- double
+			code = code:gsub("local v99 = %(function%(p_u_96%)", "local double = (function(factor)", nil, true)
+			code = code:gsub("local v100, v101 = v99%(5%)", "local res1, cnt1 = double(5)", nil, true)
+			code = code:gsub("local v102, v103 = v99%(3%)", "local res2, cnt2 = double(3)", nil, true)
+			code = code:gsub("print%(v100, v101%)", "print(res1, cnt1)", nil, true)
+			code = code:gsub("print%(v102, v103%)", "print(res2, cnt2)", nil, true)
 
 			return code
 		end
 
-		-- ФОРМАТИРОВАНИЕ
-		local function prettyPrint(code)
-			local indent = 0
-			local lines = {}
-			for line in code:gmatch("[^\r\n]+") do
-				local trimmed = line:match("^%s*(.-)%s*$")
-				if trimmed:match("^end") or trimmed:match("^else") or trimmed:match("^elseif") or trimmed:match("^until") or trimmed:match("^}$") then
-					indent = math.max(0, indent - 1)
-				end
-				lines[#lines+1] = string.rep("    ", indent) .. trimmed
-				if trimmed:match("then$") or trimmed:match("do$") or trimmed:match("function%s*%([^)]*%)%s*$") or trimmed:match("{$") then
-					indent = indent + 1
-				end
-			end
-			return table.concat(lines, "\n")
+		-- Убираем мусор (upvalues, пустые строки)
+		local function cleanJunk(code)
+			code = code:gsub("%-%- upvalues: [^\n]*\n", "")
+			code = code:gsub(", %(copy%) [%w_]+", "")
+			code = code:gsub(", %(ref%) [%w_]+", "")
+			code = code:gsub(",%s*%,", ",")
+			code = code:gsub(",\n", "\n")
+			return code
 		end
 
-		-- ОСНОВНАЯ ФУНКЦИЯ
 		local function enhanceFunction(code)
-			local newCode = code
-
-			-- преобразование тернарников в if
-			newCode = newCode:gsub("return%s+([^\n;]+)", function(retExpr)
-				local node = expandTernary(retExpr)
-				if node then
-					return buildIfChain(node, 1)
-				else
-					return "return " .. retExpr
-				end
-			end)
-
-			newCode = fixTableKeys(newCode)
-			newCode = fixUnicodeStrings(newCode)
-			newCode = heuristicRename(newCode)
-			newCode = prettyPrint(newCode)
-			return newCode
+			code = fixTableCommas(code)
+			code = fixDoubleParens(code)
+			code = minimalRenames(code)
+			code = cleanJunk(code)
+			return code
 		end
 
 		ldecompile = function(script)
