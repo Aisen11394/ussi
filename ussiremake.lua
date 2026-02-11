@@ -2936,9 +2936,6 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 			code = code:gsub(", %(copy%) [%w_]+", "")
 			code = code:gsub(", %(ref%) [%w_]+", "")
 
-			code = code:gsub(",\n", "\n")
-			code = code:gsub(",%s*$", "")
-
 			code = code:gsub("::[%w_]+%d*::", "")
 
 			code = code:gsub("goto%s+[%w_]+%d*", "")
