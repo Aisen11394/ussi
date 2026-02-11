@@ -1,4 +1,4 @@
-print("decompiler version: 1)
+print("decompiler version: 1")
 
 --!native
 --!optimize 2
