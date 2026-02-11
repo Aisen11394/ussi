@@ -2930,83 +2930,26 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 	do
 		local baseDecompile = ldecompile
 
-		local function cleanJunk(code)
+		local function clean(code)
 			code = code:gsub("%-%- upvalues: [^\n]*\n", "\n")
+
 			code = code:gsub(", %(copy%) [%w_]+", "")
 			code = code:gsub(", %(ref%) [%w_]+", "")
-			code = code:gsub(",%s*$", "")
+
 			code = code:gsub(",\n", "\n")
-			return code
-		end
+			code = code:gsub(",%s*$", "")
 
-		local function renameMethodSelf(code)
-			code = code:gsub('(function%s+[%w_]+:[%w_]+%s*%()([^)]-)(%)?)', function(start, params, endp)
-				local newParams = params:gsub('^%s*[%w_]+', 'self')
-				return start .. newParams .. endp
-			end)
-			return code
-		end
+			code = code:gsub("::[%w_]+%d*::", "")
 
-		local function renameLoopIndices(code)
-			local idx = 0
-			code = code:gsub('(for%s+)(v%d+)(%s*=%s*[^,]-,[^,]-%s+do)', function(pre, name, post)
-				idx = idx + 1
-				local newName = (idx == 1 and 'i') or (idx == 2 and 'j') or ('k' .. (idx-2))
-				return pre .. newName .. post
-			end)
-			return code
-		end
+			code = code:gsub("goto%s+[%w_]+%d*", "")
 
-		local function renameCounters(code)
-			code = code:gsub('(local%s+)([%w_]+)(%s*=%s*0%s*\n%s*return%s+function%([^)]*%)%s*\n%s*)(%2%s*=%s*%2%s*%+%s*1)', 
-				function(prefix, name, middle, inc)
-					return prefix .. 'count' .. middle .. 'count = count + 1'
-				end)
-			return code
-		end
-
-		local function renameMultiplier(code)
-			code = code:gsub('(local%s+)([%w_]+)(%s*=%s*%([^%)]-%)%s*return%s+function%([^%)]-%))',
-				function(prefix, name, rest)
-					local newRest = rest:gsub('%(([%w_]+)%)', '(factor)')
-					newRest = newRest:gsub('return%s+function%(([%w_]+)%)', 'return function(value)')
-					return prefix .. 'double' .. newRest
-				end)
-			return code
-		end
-
-		local function renameAccumulator(code)
-			code = code:gsub('(local%s+)([%w_]+)(%s*=%s*0%s*\n%s*return%s+function%(([%w_]+)%)%s*\n%s*)(%2%s*=%s*%2%s*%+%s*%([^%)]-%))',
-				function(prefix, name, middle, param, inc)
-					return prefix .. 'total' .. middle .. 'return function(amount)\n    ' .. 
-						inc:gsub(name, 'total'):gsub(param, 'amount'):gsub('or%s+[%w_]+', 'or step')
-				end)
-			return code
-		end
-
-		local function renameRange(code)
-			code = code:gsub('(local%s+)([%w_]+)(%s*=%s*0%s*\n%s*return%s+function%(%)%s*\n%s*)(%2%s*=%s*%2%s*%+%s*1)',
-				function(prefix, name, middle, inc)
-					return prefix .. 'i' .. middle .. 'i = i + 1'
-				end)
-			return code
-		end
-
-		local function enhance(code)
-			code = cleanJunk(code)
-			code = renameMethodSelf(code)
-			code = renameLoopIndices(code)
-			code = renameCounters(code)
-			code = renameMultiplier(code)
-			code = renameAccumulator(code)
-			code = renameRange(code)
 			return code
 		end
 
 		ldecompile = function(script)
 			local raw = baseDecompile(script)
 			if not raw or raw == "" then return raw end
-			return enhance(raw)
+			return clean(raw)
 		end
 	end
 	
