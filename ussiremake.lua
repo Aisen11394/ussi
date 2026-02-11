@@ -856,7 +856,7 @@ XML_Descriptors = {
 			.. "</R21><R22>"
 			.. R22
 			.. "</R22>",
-			"CoordinateFrame"
+		"CoordinateFrame"
 	end,
 	-- CFrameQuat = function(raw) -- ? This will probably never release as it's not even used anywhere naturally, but there are hints it does exist as a DataType
 	-- 	local X, Y, Z, R00, R01, R02, R10, R11, R12, R20, R21, R22 = raw:GetComponents()
@@ -955,24 +955,24 @@ XML_Descriptors = {
 		return "<faces>" .. __COUNT_BITS(raw.Right, raw.Top, raw.Back, raw.Left, raw.Bottom, raw.Front) .. "</faces>"
 	end,
 	Font = 636 < CLIENT_VERSION
-			and function(raw)
-				-- TODO (OPTIONAL ELEMENT): Figure out how to determine (ContentId) <CachedFaceId><url>rbxasset://fonts/GothamSSm-Medium.otf</url></CachedFaceId>
+		and function(raw)
+			-- TODO (OPTIONAL ELEMENT): Figure out how to determine (ContentId) <CachedFaceId><url>rbxasset://fonts/GothamSSm-Medium.otf</url></CachedFaceId>
 				--[[
 		? game:GetService("TextService"):GetFontMemoryData()
 		? rbxasset://fonts/families/{Enum.Font.BuilderSans.Name}.json
 		]]
 
-				local ok_w, weight = pcall(index, raw, "Weight")
-				local ok_s, style = pcall(index, raw, "Style")
+			local ok_w, weight = pcall(index, raw, "Weight")
+			local ok_s, style = pcall(index, raw, "Style")
 
-				return "<Family>"
-					.. XML_Descriptors.ContentId(raw.Family)
-					.. "</Family><Weight>"
-					.. (ok_w and XML_Descriptors.EnumItem(weight) or "")
-					.. "</Weight><Style>"
-					.. (ok_s and style.Name or "") -- Weird but this field accepts .Name of enum instead..
-					.. "</Style>"
-			end
+			return "<Family>"
+			.. XML_Descriptors.ContentId(raw.Family)
+			.. "</Family><Weight>"
+			.. (ok_w and XML_Descriptors.EnumItem(weight) or "")
+			.. "</Weight><Style>"
+			.. (ok_s and style.Name or "") -- Weird but this field accepts .Name of enum instead..
+			.. "</Style>"
+		end
 		or function(raw)
 			local FontString = tostring(raw)
 
@@ -980,12 +980,12 @@ XML_Descriptors = {
 			local EmptyStyle = string_find(FontString, "Style =  }")
 
 			return "<Family>"
-				.. XML_Descriptors.ContentId(raw.Family)
-				.. "</Family><Weight>"
-				.. (EmptyWeight and "" or XML_Descriptors.EnumItem(raw.Weight))
-				.. "</Weight><Style>"
-				.. (EmptyStyle and "" or raw.Style.Name) -- Weird but this field accepts .Name of enum instead..
-				.. "</Style>"
+			.. XML_Descriptors.ContentId(raw.Family)
+			.. "</Family><Weight>"
+			.. (EmptyWeight and "" or XML_Descriptors.EnumItem(raw.Weight))
+			.. "</Weight><Style>"
+			.. (EmptyStyle and "" or raw.Style.Name) -- Weird but this field accepts .Name of enum instead..
+			.. "</Style>"
 		end,
 	NetAssetRef = nil,
 	NumberRange = function(raw) -- tostring(raw) also works
@@ -1035,7 +1035,7 @@ XML_Descriptors = {
 		local CustomPhysics = "<CustomPhysics>" .. XML_Descriptors.bool(raw and true or false) .. "</CustomPhysics>"
 
 		return raw
-				and CustomPhysics .. "<Density>" .. raw.Density .. "</Density><Friction>" .. raw.Friction .. "</Friction><Elasticity>" .. raw.Elasticity .. "</Elasticity><FrictionWeight>" .. raw.FrictionWeight .. "</FrictionWeight><ElasticityWeight>" .. raw.ElasticityWeight .. "</ElasticityWeight><AcousticAbsorption>" .. raw.AcousticAbsorption .. "</AcousticAbsorption>"
+			and CustomPhysics .. "<Density>" .. raw.Density .. "</Density><Friction>" .. raw.Friction .. "</Friction><Elasticity>" .. raw.Elasticity .. "</Elasticity><FrictionWeight>" .. raw.FrictionWeight .. "</FrictionWeight><ElasticityWeight>" .. raw.ElasticityWeight .. "</ElasticityWeight><AcousticAbsorption>" .. raw.AcousticAbsorption .. "</AcousticAbsorption>"
 			or CustomPhysics
 	end,
 	-- ProtectedString = function(raw) return tostring(raw), "ProtectedString" end,
@@ -2023,7 +2023,7 @@ do
 									preferredDescriptorProp == nil
 									or (
 										preferredDescriptorProp.MemberType == "Property"
-										and ValueType_Name ~= preferredDescriptorProp.ValueType
+											and ValueType_Name ~= preferredDescriptorProp.ValueType
 									)
 								then -- For ex. (if they were notscriptable) CollisionGroupId (int) -> CollisionGroup (string)
 									PreferredDescriptorName = nil
@@ -2052,26 +2052,26 @@ do
 							local accessFunc = PreferredDescriptorName
 								and (
 									preferredDescriptorProp.MemberType == "Property"
-										and function(instance)
-											return instance[PreferredDescriptorName]
-										end
+									and function(instance)
+										return instance[PreferredDescriptorName]
+									end
 									or function(instance) -- Assume MemberType is "Function"
 										return instance[PreferredDescriptorName](instance)
 									end
 								)
 
 							Property.Fallback = NotScriptableFix
-									and (type(NotScriptableFix) == "function" and NotScriptableFix or accessFunc and function(
-										instance
-									)
-										local o, r = pcall(accessFunc, instance)
-										if o then
-											return r
-										end
-										return instance[NotScriptableFix]
-									end or function(instance)
-										return instance[NotScriptableFix]
-									end)
+								and (type(NotScriptableFix) == "function" and NotScriptableFix or accessFunc and function(
+									instance
+								)
+								local o, r = pcall(accessFunc, instance)
+								if o then
+									return r
+								end
+								return instance[NotScriptableFix]
+							end or function(instance)
+								return instance[NotScriptableFix]
+							end)
 								or accessFunc
 
 							ClassProperties[ClassProperties_size] = Property
@@ -2506,9 +2506,9 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 
 	local DecompileIgnore, IgnoreList, IgnoreProperties, NotCreatableFixes =
 		ArrayToDict(OPTIONS.DecompileIgnore, true),
-		ArrayToDict(OPTIONS.IgnoreList, true),
-		ArrayToDict(OPTIONS.IgnoreProperties),
-		ArrayToDict(OPTIONS.NotCreatableFixes, true, "Folder")
+	ArrayToDict(OPTIONS.IgnoreList, true),
+	ArrayToDict(OPTIONS.IgnoreProperties),
+	ArrayToDict(OPTIONS.NotCreatableFixes, true, "Folder")
 
 	local __DEBUG_MODE = OPTIONS.__DEBUG_MODE
 
@@ -2926,6 +2926,131 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 			end
 		end
 	end
+	
+	do
+		local baseDecompile = ldecompile
+		local debugInfo = debug and debug.getinfo
+		local debugLocal = debug and debug.getlocal
+		local debugUpvalue = debug and debug.getupvalue
+		local hasFullDebug = debugInfo and debugLocal
+
+		local function expandTernary(expr)
+			if type(expr) ~= "string" then return nil end
+			expr = expr:gsub("^%s*(.-)%s*$", "%1")
+			if expr:sub(1,1) == "(" and expr:sub(-1,-1) == ")" then
+				expr = expr:sub(2,-2)
+			end
+			local andPos = expr:find(" and ", 1, true)
+			if not andPos then return nil end
+			local orPos = expr:find(" or ", andPos+5, 1, true)
+			if not orPos then return nil end
+			local cond = expr:sub(1, andPos-1)
+			local truePart = expr:sub(andPos+5, orPos-1)
+			local falsePart = expr:sub(orPos+4)
+			return { cond = cond, trueVal = truePart, falseVal = falsePart }
+		end
+
+		local function buildIfChain(node, indent)
+			indent = indent or 0
+			local lines = {}
+			local sp = string.rep("    ", indent)
+			table.insert(lines, sp .. "if " .. node.cond .. " then")
+			table.insert(lines, sp .. "    return " .. node.trueVal)
+			local elseNode = expandTernary(node.falseVal)
+			if elseNode then
+				table.insert(lines, sp .. "elseif " .. elseNode.cond .. " then")
+				table.insert(lines, sp .. "    return " .. elseNode.trueVal)
+				local rest = elseNode.falseVal
+				while rest do
+					local n = expandTernary(rest)
+					if n then
+						table.insert(lines, sp .. "elseif " .. n.cond .. " then")
+						table.insert(lines, sp .. "    return " .. n.trueVal)
+						rest = n.falseVal
+					else
+						table.insert(lines, sp .. "else")
+						table.insert(lines, sp .. "    return " .. rest)
+						break
+					end
+				end
+			else
+				table.insert(lines, sp .. "else")
+				table.insert(lines, sp .. "    return " .. node.falseVal)
+			end
+			table.insert(lines, sp .. "end")
+			return table.concat(lines, "\n")
+		end
+
+		local keywords = {
+			["and"]=1, ["break"]=1, ["do"]=1, ["else"]=1, ["elseif"]=1, ["end"]=1,
+			["false"]=1, ["for"]=1, ["function"]=1, ["goto"]=1, ["if"]=1, ["in"]=1,
+			["local"]=1, ["nil"]=1, ["not"]=1, ["or"]=1, ["repeat"]=1, ["return"]=1,
+			["then"]=1, ["true"]=1, ["until"]=1, ["while"]=1
+		}
+
+		local function fixTableKeys(code)
+			return code:gsub('%["([%a_][%w_]*)"%]%s*=', function(key)
+				if not keywords[key] then
+					return key .. " ="
+				else
+					return '["' .. key .. '"] ='
+				end
+			end)
+		end
+
+		local function fixUnicodeStrings(code)
+			return code:gsub('"(\\%d%d%d[\\%d%d%d]*)"', function(esc)
+				local bytes = {}
+				for b in esc:gmatch("\\(%d%d%d)") do
+					bytes[#bytes+1] = tonumber(b)
+				end
+				local s = string.char(table.unpack(bytes))
+				if pcall(utf8.len, s) then
+					return '"' .. s .. '"'
+				else
+					return '"' .. esc .. '"'
+				end
+			end)
+		end
+
+		local function prettyPrint(code)
+			local indent = 0
+			local lines = {}
+			for line in code:gmatch("[^\r\n]+") do
+				local trimmed = line:match("^%s*(.-)%s*$")
+				if trimmed:match("^end") or trimmed:match("^else") or trimmed:match("^elseif") or trimmed:match("^until") or trimmed:match("^}$") then
+					indent = math.max(0, indent - 1)
+				end
+				lines[#lines+1] = string.rep("    ", indent) .. trimmed
+				if trimmed:match("then$") or trimmed:match("do$") or trimmed:match("function%s*%([^)]*%)%s*$") or trimmed:match("{$") then
+					indent = indent + 1
+				end
+			end
+			return table.concat(lines, "\n")
+		end
+
+		local function enhanceFunction(code)
+			local newCode = code
+			newCode = newCode:gsub("return%s+([^\n;]+)", function(retExpr)
+				local node = expandTernary(retExpr)
+				if node then
+					return buildIfChain(node, 1)
+				else
+					return "return " .. retExpr
+				end
+			end)
+			newCode = fixTableKeys(newCode)
+			newCode = fixUnicodeStrings(newCode)
+			newCode = prettyPrint(newCode)
+			return newCode
+		end
+
+		ldecompile = function(script)
+			local raw = baseDecompile(script)
+			if not raw or raw == "" then return raw end
+			return enhanceFunction(raw)
+		end
+	end
 
 	local function GetLocalPlayer()
 		return service.Players.LocalPlayer
@@ -2957,7 +3082,7 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 		return result == nil
 			or result == "can't get value"
 			or type(result) == "string"
-				and (category == "Enum" or string_find(result, "Unable to get property " .. propertyName))
+			and (category == "Enum" or string_find(result, "Unable to get property " .. propertyName))
 	end
 
 	local __BREAK = "__BREAK" .. service.HttpService:GenerateGUID(false)
@@ -3335,7 +3460,7 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 										Fix
 										and (
 											PropertyName == "PlayerToHideFrom"
-											or ValueType ~= "Instance" and ValueType ~= Fix
+												or ValueType ~= "Instance" and ValueType ~= Fix
 										)
 									then -- * To avoid errors
 										continue
@@ -3426,8 +3551,8 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 											if
 												isLocalScript and instance.RunContext == Enum.RunContext.Server
 												or not isLocalScript
-													and instance:IsA("Script")
-													and instance.RunContext ~= Enum.RunContext.Client
+												and instance:IsA("Script")
+												and instance.RunContext ~= Enum.RunContext.Client
 											then
 												value = "-- [FilteringEnabled] Server Scripts are IMPOSSIBLE to save" -- TODO: Could be not just server scripts in the future
 											else
@@ -3458,7 +3583,7 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 											-- * It can be empty, because it's optional
 											-- ? Though why even save it if it's empty considering it's optional
 											continue
-										-- value, tag = "", ValueType
+											-- value, tag = "", ValueType
 										else
 											value, tag = ReturnValueAndTag(raw, ValueType, Descriptor)
 										end
@@ -3634,7 +3759,7 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 				"--[[\n"
 					.. (#RecoveredScripts ~= 0 and "\t\tIMPORTANT: Original Source of these Scripts was Recovered: " .. service.HttpService:JSONEncode(
 						RecoveredScripts
-					) .. "\n" or "")
+						) .. "\n" or "")
 					.. [[
 		Thank you for using UniversalSynSaveInstance (Join to Copy Games) https://discord.gg/wx4ThpAsmw.
 
@@ -3964,8 +4089,8 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 				if getconnections then
 					for _, c in getconnections(Idled) do
 						if not pcall(function()
-							c:Disable()
-						end) then
+								c:Disable()
+							end) then
 							pcall(function()
 								c:Disconnect()
 							end)
