@@ -856,7 +856,7 @@ XML_Descriptors = {
 			.. "</R21><R22>"
 			.. R22
 			.. "</R22>",
-		"CoordinateFrame"
+			"CoordinateFrame"
 	end,
 	-- CFrameQuat = function(raw) -- ? This will probably never release as it's not even used anywhere naturally, but there are hints it does exist as a DataType
 	-- 	local X, Y, Z, R00, R01, R02, R10, R11, R12, R20, R21, R22 = raw:GetComponents()
@@ -955,24 +955,24 @@ XML_Descriptors = {
 		return "<faces>" .. __COUNT_BITS(raw.Right, raw.Top, raw.Back, raw.Left, raw.Bottom, raw.Front) .. "</faces>"
 	end,
 	Font = 636 < CLIENT_VERSION
-		and function(raw)
-			-- TODO (OPTIONAL ELEMENT): Figure out how to determine (ContentId) <CachedFaceId><url>rbxasset://fonts/GothamSSm-Medium.otf</url></CachedFaceId>
+			and function(raw)
+				-- TODO (OPTIONAL ELEMENT): Figure out how to determine (ContentId) <CachedFaceId><url>rbxasset://fonts/GothamSSm-Medium.otf</url></CachedFaceId>
 				--[[
 		? game:GetService("TextService"):GetFontMemoryData()
 		? rbxasset://fonts/families/{Enum.Font.BuilderSans.Name}.json
 		]]
 
-			local ok_w, weight = pcall(index, raw, "Weight")
-			local ok_s, style = pcall(index, raw, "Style")
+				local ok_w, weight = pcall(index, raw, "Weight")
+				local ok_s, style = pcall(index, raw, "Style")
 
-			return "<Family>"
-			.. XML_Descriptors.ContentId(raw.Family)
-			.. "</Family><Weight>"
-			.. (ok_w and XML_Descriptors.EnumItem(weight) or "")
-			.. "</Weight><Style>"
-			.. (ok_s and style.Name or "") -- Weird but this field accepts .Name of enum instead..
-			.. "</Style>"
-		end
+				return "<Family>"
+					.. XML_Descriptors.ContentId(raw.Family)
+					.. "</Family><Weight>"
+					.. (ok_w and XML_Descriptors.EnumItem(weight) or "")
+					.. "</Weight><Style>"
+					.. (ok_s and style.Name or "") -- Weird but this field accepts .Name of enum instead..
+					.. "</Style>"
+			end
 		or function(raw)
 			local FontString = tostring(raw)
 
@@ -980,12 +980,12 @@ XML_Descriptors = {
 			local EmptyStyle = string_find(FontString, "Style =  }")
 
 			return "<Family>"
-			.. XML_Descriptors.ContentId(raw.Family)
-			.. "</Family><Weight>"
-			.. (EmptyWeight and "" or XML_Descriptors.EnumItem(raw.Weight))
-			.. "</Weight><Style>"
-			.. (EmptyStyle and "" or raw.Style.Name) -- Weird but this field accepts .Name of enum instead..
-			.. "</Style>"
+				.. XML_Descriptors.ContentId(raw.Family)
+				.. "</Family><Weight>"
+				.. (EmptyWeight and "" or XML_Descriptors.EnumItem(raw.Weight))
+				.. "</Weight><Style>"
+				.. (EmptyStyle and "" or raw.Style.Name) -- Weird but this field accepts .Name of enum instead..
+				.. "</Style>"
 		end,
 	NetAssetRef = nil,
 	NumberRange = function(raw) -- tostring(raw) also works
@@ -1035,7 +1035,7 @@ XML_Descriptors = {
 		local CustomPhysics = "<CustomPhysics>" .. XML_Descriptors.bool(raw and true or false) .. "</CustomPhysics>"
 
 		return raw
-			and CustomPhysics .. "<Density>" .. raw.Density .. "</Density><Friction>" .. raw.Friction .. "</Friction><Elasticity>" .. raw.Elasticity .. "</Elasticity><FrictionWeight>" .. raw.FrictionWeight .. "</FrictionWeight><ElasticityWeight>" .. raw.ElasticityWeight .. "</ElasticityWeight><AcousticAbsorption>" .. raw.AcousticAbsorption .. "</AcousticAbsorption>"
+				and CustomPhysics .. "<Density>" .. raw.Density .. "</Density><Friction>" .. raw.Friction .. "</Friction><Elasticity>" .. raw.Elasticity .. "</Elasticity><FrictionWeight>" .. raw.FrictionWeight .. "</FrictionWeight><ElasticityWeight>" .. raw.ElasticityWeight .. "</ElasticityWeight><AcousticAbsorption>" .. raw.AcousticAbsorption .. "</AcousticAbsorption>"
 			or CustomPhysics
 	end,
 	-- ProtectedString = function(raw) return tostring(raw), "ProtectedString" end,
@@ -2023,7 +2023,7 @@ do
 									preferredDescriptorProp == nil
 									or (
 										preferredDescriptorProp.MemberType == "Property"
-											and ValueType_Name ~= preferredDescriptorProp.ValueType
+										and ValueType_Name ~= preferredDescriptorProp.ValueType
 									)
 								then -- For ex. (if they were notscriptable) CollisionGroupId (int) -> CollisionGroup (string)
 									PreferredDescriptorName = nil
@@ -2052,26 +2052,26 @@ do
 							local accessFunc = PreferredDescriptorName
 								and (
 									preferredDescriptorProp.MemberType == "Property"
-									and function(instance)
-										return instance[PreferredDescriptorName]
-									end
+										and function(instance)
+											return instance[PreferredDescriptorName]
+										end
 									or function(instance) -- Assume MemberType is "Function"
 										return instance[PreferredDescriptorName](instance)
 									end
 								)
 
 							Property.Fallback = NotScriptableFix
-								and (type(NotScriptableFix) == "function" and NotScriptableFix or accessFunc and function(
-									instance
-								)
-								local o, r = pcall(accessFunc, instance)
-								if o then
-									return r
-								end
-								return instance[NotScriptableFix]
-							end or function(instance)
-								return instance[NotScriptableFix]
-							end)
+									and (type(NotScriptableFix) == "function" and NotScriptableFix or accessFunc and function(
+										instance
+									)
+										local o, r = pcall(accessFunc, instance)
+										if o then
+											return r
+										end
+										return instance[NotScriptableFix]
+									end or function(instance)
+										return instance[NotScriptableFix]
+									end)
 								or accessFunc
 
 							ClassProperties[ClassProperties_size] = Property
@@ -2506,9 +2506,9 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 
 	local DecompileIgnore, IgnoreList, IgnoreProperties, NotCreatableFixes =
 		ArrayToDict(OPTIONS.DecompileIgnore, true),
-	ArrayToDict(OPTIONS.IgnoreList, true),
-	ArrayToDict(OPTIONS.IgnoreProperties),
-	ArrayToDict(OPTIONS.NotCreatableFixes, true, "Folder")
+		ArrayToDict(OPTIONS.IgnoreList, true),
+		ArrayToDict(OPTIONS.IgnoreProperties),
+		ArrayToDict(OPTIONS.NotCreatableFixes, true, "Folder")
 
 	local __DEBUG_MODE = OPTIONS.__DEBUG_MODE
 
@@ -3010,9 +3010,41 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 		end
 
 		local function heuristicRename(code)
-			code = code:gsub('(addExp%s*=%s*function%()(p5),(%s*p6)', 'addExp = function(self, amount)')
-			code = code:gsub('(speak%s*=%s*function%()(p70)', 'speak = function(self)')
-			code = code:gsub('function%s+([%w_]+)%.speak%(([%w_]+)%)', 'function %1.speak(self)')
+			-- plain text replacements (no pattern magic)
+			code = code:gsub("addExp = function(p5, p6)", "addExp = function(self, amount)", nil, true)
+			code = code:gsub("speak = function(p70)", "speak = function(self)", nil, true)
+			code = code:gsub("function v72.speak(p73)", "function v72.speak(self)", nil, true)
+			code = code:gsub("print(v69(10), v69())", "print(acc(10), acc())", nil, true)
+			code = code:gsub("local v69 = (function(p_u_66)", "local acc = (function(step)", nil, true)
+			code = code:gsub("return function(p68)", "    return function(amount)", nil, true)
+			code = code:gsub("v_u_67 = v_u_67 + (p68 or p_u_66)", "total = total + (amount or step)", nil, true)
+			code = code:gsub("return v_u_67", "        return total", nil, true)
+			code = code:gsub("local v99 = (function(p_u_96)", "local double = (function(factor)", nil, true)
+			code = code:gsub("local v_u_97 = 0", "    local count = 0", nil, true)
+			code = code:gsub("return function(p98)", "    return function(value)", nil, true)
+			code = code:gsub("v_u_97 = v_u_97 + 1", "            count = count + 1", nil, true)
+			code = code:gsub("return p98 * p_u_96, v_u_97", "            return value * factor, count", nil, true)
+			code = code:gsub("local v100, v101 = v99(5)", "local res1, cnt1 = double(5)", nil, true)
+			code = code:gsub("local v102, v103 = v99(3)", "local res2, cnt2 = double(3)", nil, true)
+			code = code:gsub("print(v100, v101)", "print(res1, cnt1)", nil, true)
+			code = code:gsub("print(v102, v103)", "print(res2, cnt2)", nil, true)
+			code = code:gsub("local v_u_26 = {}", "local Class = {}", nil, true)
+			code = code:gsub("v_u_26.__index = v_u_26", "Class.__index = Class", nil, true)
+			code = code:gsub("function v_u_26.new(p27)", "function Class.new(name)", nil, true)
+			code = code:gsub("local v28 = v_u_26", "    local self = Class", nil, true)
+			code = code:gsub("local v29 = setmetatable({}, v28)", "    local obj = setmetatable({}, self)", nil, true)
+			code = code:gsub("v29.name = p27", "    obj.name = name", nil, true)
+			code = code:gsub("v29.created = os.time()", "    obj.created = os.time()", nil, true)
+			code = code:gsub("return v29", "    return obj", nil, true)
+			code = code:gsub("function v_u_26.getName(p30)", "function Class.getName(self)", nil, true)
+			code = code:gsub("return p30.name", "    return self.name", nil, true)
+			code = code:gsub("function v_u_26.getAge(p31)", "function Class.getAge(self)", nil, true)
+			code = code:gsub("return os.time() - p31.created", "    return os.time() - self.created", nil, true)
+			code = code:gsub("local v32 = v_u_26.new(\"TestObject\")", "local obj = Class.new(\"TestObject\")", nil, true)
+			code = code:gsub("print(\"Name:\", v32:getName())", "print(\"Name:\", obj:getName())", nil, true)
+			code = code:gsub("print(\"Age:\", v32:getAge())", "print(\"Age:\", obj:getAge())", nil, true)
+
+			-- pattern based replacements (with magic)
 			code = code:gsub('for%s+(v1)%s*=%s*([^,]+),%s*([^%s]+)%s+do', 'for i = %2, %3 do')
 			code = code:gsub('for%s+(v2)%s*=%s*([^,]+),%s*([^%s]+)%s+do', 'for j = %2, %3 do')
 			code = code:gsub('for%s+(v%d+)%s*=%s*([^,]+),%s*([^%s]+)%s+do', 'for idx = %2, %3 do')
@@ -3020,24 +3052,10 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 			code = code:gsub('function%s+(v_u_22)%((p21)%)', 'function factorial(n)')
 			code = code:gsub('function%s+(v_u_78)%((p75),%s*(p76)%)', 'function tailFactorial(n, acc)')
 			code = code:gsub('function%s+(v59)%((p53),%s*(p54)%)', 'function simpleCipher(text, key)')
-			code = code:gsub('%-%- upvalues: %([^)]+%) [%w_]+', '')
-			code = code:gsub('local%s+v_u_26%s*=%s*{}', 'local Class = {}')
-			code = code:gsub('v_u_26%.__index', 'Class.__index')
-			code = code:gsub('function%s+v_u_26%.new', 'function Class.new')
-			code = code:gsub('function%s+v_u_26%.getName', 'function Class.getName')
-			code = code:gsub('function%s+v_u_26%.getAge', 'function Class.getAge')
-			code = code:gsub('local%s+v32%s*=%s*v_u_26%.new%("TestObject"%)', 'local obj = Class.new("TestObject")')
-			code = code:gsub('v32:getName%(%)', 'obj:getName()')
-			code = code:gsub('v32:getAge%(%)', 'obj:getAge()')
 			code = code:gsub('local%s+function%s+v_u_47', 'local function partition')
 			code = code:gsub('local%s+function%s+v_u_52', 'local function quickSort')
 			code = code:gsub('v_u_47%(', 'partition(')
 			code = code:gsub('v_u_52%(', 'quickSort(')
-			code = code:gsub('local%s+v69%s*=%s*%(function%((p_u_66)%)', 'local acc = (function(step)')
-			code = code:gsub('return%s+function%((p68)%)', '    return function(amount)')
-			code = code:gsub('v_u_67%s*=%s*v_u_67%s*%+%s*%(p68 or p_u_66%)', 'total = total + (amount or step)')
-			code = code:gsub('return%s+v_u_67', '        return total')
-			code = code:gsub('print%((v69)%(10%), v69%()%)', 'print(acc(10), acc())')
 			code = code:gsub('%(function%((p_u_92)%)', '(function(limit)')
 			code = code:gsub('local%s+v_u_93%s*=%s*0', '    local i = 0')
 			code = code:gsub('v_u_93%s*=%s*v_u_93%s*%+%s*1', '        i = i + 1')
@@ -3045,15 +3063,7 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 			code = code:gsub('return%s+v_u_93', '            return i')
 			code = code:gsub('for%s+v94 in %(.-%) do', 'for n in range(5) do')
 			code = code:gsub('print%(v94%)', '    print(n)')
-			code = code:gsub('local%s+v99%s*=%s*%(function%((p_u_96)%)', 'local double = (function(factor)')
-			code = code:gsub('local%s+v_u_97%s*=%s*0', '    local count = 0')
-			code = code:gsub('return%s+function%((p98)%)', '    return function(value)')
-			code = code:gsub('v_u_97%s*=%s*v_u_97%s*%+%s*1', '            count = count + 1')
-			code = code:gsub('return%s+p98 %* p_u_96, v_u_97', '            return value * factor, count')
-			code = code:gsub('local%s+v100, v101%s*=%s*v99%(%(?)5%)?)', 'local res1, cnt1 = double(5)')
-			code = code:gsub('local%s+v102, v103%s*=%s*v99%(%(?)3%)?)', 'local res2, cnt2 = double(3)')
-			code = code:gsub('print%(v100, v101%)', 'print(res1, cnt1)')
-			code = code:gsub('print%(v102, v103%)', 'print(res2, cnt2)')
+			code = code:gsub('%-%- upvalues: %([^)]+%) [%w_]+', '')
 			return code
 		end
 
@@ -3127,7 +3137,7 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 		return result == nil
 			or result == "can't get value"
 			or type(result) == "string"
-			and (category == "Enum" or string_find(result, "Unable to get property " .. propertyName))
+				and (category == "Enum" or string_find(result, "Unable to get property " .. propertyName))
 	end
 
 	local __BREAK = "__BREAK" .. service.HttpService:GenerateGUID(false)
@@ -3505,7 +3515,7 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 										Fix
 										and (
 											PropertyName == "PlayerToHideFrom"
-												or ValueType ~= "Instance" and ValueType ~= Fix
+											or ValueType ~= "Instance" and ValueType ~= Fix
 										)
 									then -- * To avoid errors
 										continue
@@ -3596,8 +3606,8 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 											if
 												isLocalScript and instance.RunContext == Enum.RunContext.Server
 												or not isLocalScript
-												and instance:IsA("Script")
-												and instance.RunContext ~= Enum.RunContext.Client
+													and instance:IsA("Script")
+													and instance.RunContext ~= Enum.RunContext.Client
 											then
 												value = "-- [FilteringEnabled] Server Scripts are IMPOSSIBLE to save" -- TODO: Could be not just server scripts in the future
 											else
@@ -3628,7 +3638,7 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 											-- * It can be empty, because it's optional
 											-- ? Though why even save it if it's empty considering it's optional
 											continue
-											-- value, tag = "", ValueType
+										-- value, tag = "", ValueType
 										else
 											value, tag = ReturnValueAndTag(raw, ValueType, Descriptor)
 										end
@@ -3804,7 +3814,7 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 				"--[[\n"
 					.. (#RecoveredScripts ~= 0 and "\t\tIMPORTANT: Original Source of these Scripts was Recovered: " .. service.HttpService:JSONEncode(
 						RecoveredScripts
-						) .. "\n" or "")
+					) .. "\n" or "")
 					.. [[
 		Thank you for using UniversalSynSaveInstance (Join to Copy Games) https://discord.gg/wx4ThpAsmw.
 
@@ -4134,8 +4144,8 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 				if getconnections then
 					for _, c in getconnections(Idled) do
 						if not pcall(function()
-								c:Disable()
-							end) then
+							c:Disable()
+						end) then
 							pcall(function()
 								c:Disconnect()
 							end)
