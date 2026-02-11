@@ -4221,3 +4221,4 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 end
 
 return synsaveinstance
+print("decompiler version: 1)
