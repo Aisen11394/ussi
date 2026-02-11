@@ -1,3 +1,5 @@
+print("decompiler version: 1)
+
 --!native
 --!optimize 2
 --!divine-intellect
@@ -4221,4 +4223,3 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 end
 
 return synsaveinstance
-print("decompiler version: 1)
