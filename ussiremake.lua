@@ -2930,93 +2930,83 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 	do
 		local baseDecompile = ldecompile
 
-		-- Исправляем пропущенные запятые в таблицах (только точные паттерны из твоего вывода)
-		local function fixTableCommas(code)
-			code = code:gsub('({%s*name%s*=%s*"TestPlayer"%s*)level%s*=%s*1', '%1, level = 1')
-			code = code:gsub('(level%s*=%s*1%s*)experience%s*=%s*0', '%1, experience = 0')
-			code = code:gsub('(experience%s*=%s*0%s*)addExp%s*=%s*function', '%1, addExp = function')
-			code = code:gsub('({%s*__add%s*=%s*function[^}]-}%s*)__tostring', '%1, __tostring')
-			code = code:gsub('({%s*__index%s*=%s*{[^}]-}%s*)speak%s*=%s*function', '%1, speak = function')
-			code = code:gsub('({%s*sound%s*=%s*"?%?"?%s*)speak%s*=%s*function', '%1, speak = function')
-			code = code:gsub('({%s*print%s*=%s*print%s*)_G', '%1, _G')
-			code = code:gsub('({%s*__index%s*=%s*function[^}]-}%s*)__newindex', '%1, __newindex')
-			code = code:gsub('(__newindex%s*=%s*function[^}]-}%s*)__metatable', '%1, __metatable')
-			code = code:gsub('({%s*foo%s*=%s*1%s*)bar%s*=%s*2', '%1, bar = 2')
-			code = code:gsub('(bar%s*=%s*2%s*)%[3%]%s*=%s*"three"', '%1, [3] = "three"')
-			code = code:gsub('(%[3%]%s*=%s*"three"%s*)%[true%]%s*=%s*"bool"', '%1, [true] = "bool"')
-			code = code:gsub('(%[true%]%s*=%s*"bool"%s*)%[{}%]%s*=%s*"object"', '%1, [{}] = "object"')
-			code = code:gsub('({%s*enabled%s*=%s*true%s*)%["max%-items"%]%s*=%s*100', '%1, ["max-items"] = 100')
-			code = code:gsub('(%["max%-items"%]%s*=%s*100%s*)%[1%]%s*=%s*"first"', '%1, [1] = "first"')
-			code = code:gsub('(%[1%]%s*=%s*"first"%s*)%[true%]%s*=%s*"boolean"', '%1, [true] = "boolean"')
-			code = code:gsub('(%[true%]%s*=%s*"boolean"%s*)%["key with spaces"%]%s*=%s*42', '%1, ["key with spaces"] = 42')
-			return code
-		end
-
-		-- Убираем двойные скобки (( и ))
-		local function fixDoubleParens(code)
-			code = code:gsub("(%w+)%(%(", "%1(")
-			code = code:gsub("%(%)%)", ")")
-			return code
-		end
-
-		-- Только самые необходимые переименования (plain text)
-		local function minimalRenames(code)
-			-- findPrimes
-			code = code:gsub("local function v20(p15)", "local function findPrimes(limit)", nil, true)
-			code = code:gsub("local function findPrimes((p15)", "local function findPrimes(limit)", nil, true)
-			code = code:gsub("v20(", "findPrimes(", nil, true)
-			code = code:gsub("local v109 = findPrimes((20)", "local primes = findPrimes(20)", nil, true)
-			code = code:gsub("print(\"Primes up to 20:\", table.concat(v109, \", \"))", 'print("Primes up to 20:", table.concat(primes, ", "))', nil, true)
-
-			-- factorial
-			code = code:gsub("local function v_u_22(p21)", "local function factorial(n)", nil, true)
-			code = code:gsub("local function factorial((p21)", "local function factorial(n)", nil, true)
-			code = code:gsub("v_u_22(", "factorial(", nil, true)
-			code = code:gsub("print(\"Factorial 6:\", factorial((6))", 'print("Factorial 6:", factorial(6))', nil, true)
-
-			-- simpleCipher
-			code = code:gsub("local function v59(p53, p54)", "local function simpleCipher(text, key)", nil, true)
-			code = code:gsub("local function simpleCipher((p53, p54)", "local function simpleCipher(text, key)", nil, true)
-			code = code:gsub("v59(", "simpleCipher(", nil, true)
-			code = code:gsub("local v110 = simpleCipher((\"Hello\", 42)", "local cipher = simpleCipher(\"Hello\", 42)", nil, true)
-			code = code:gsub("print(\"Deciphered:\", simpleCipher((v110, 42))", 'print("Deciphered:", simpleCipher(cipher, 42))', nil, true)
-
-			-- acc
-			code = code:gsub("local v69 = %(function%(p_u_66%)", "local acc = (function(step)", nil, true)
-			code = code:gsub("print%(v69%(%(?)10%)?), v69%(%(?)%))%)", "print(acc(10), acc())", nil, true)
-
-			-- double
-			code = code:gsub("local v99 = %(function%(p_u_96%)", "local double = (function(factor)", nil, true)
-			code = code:gsub("local v100, v101 = v99%(5%)", "local res1, cnt1 = double(5)", nil, true)
-			code = code:gsub("local v102, v103 = v99%(3%)", "local res2, cnt2 = double(3)", nil, true)
-			code = code:gsub("print%(v100, v101%)", "print(res1, cnt1)", nil, true)
-			code = code:gsub("print%(v102, v103%)", "print(res2, cnt2)", nil, true)
-
-			return code
-		end
-
-		-- Убираем мусор (upvalues, пустые строки)
 		local function cleanJunk(code)
-			code = code:gsub("%-%- upvalues: [^\n]*\n", "")
+			code = code:gsub("%-%- upvalues: [^\n]*\n", "\n")
 			code = code:gsub(", %(copy%) [%w_]+", "")
 			code = code:gsub(", %(ref%) [%w_]+", "")
-			code = code:gsub(",%s*%,", ",")
+			code = code:gsub(",%s*$", "")
 			code = code:gsub(",\n", "\n")
 			return code
 		end
 
-		local function enhanceFunction(code)
-			code = fixTableCommas(code)
-			code = fixDoubleParens(code)
-			code = minimalRenames(code)
+		local function renameMethodSelf(code)
+			code = code:gsub('(function%s+[%w_]+:[%w_]+%s*%()([^)]-)(%)?)', function(start, params, endp)
+				local newParams = params:gsub('^%s*[%w_]+', 'self')
+				return start .. newParams .. endp
+			end)
+			return code
+		end
+
+		local function renameLoopIndices(code)
+			local idx = 0
+			code = code:gsub('(for%s+)(v%d+)(%s*=%s*[^,]-,[^,]-%s+do)', function(pre, name, post)
+				idx = idx + 1
+				local newName = (idx == 1 and 'i') or (idx == 2 and 'j') or ('k' .. (idx-2))
+				return pre .. newName .. post
+			end)
+			return code
+		end
+
+		local function renameCounters(code)
+			code = code:gsub('(local%s+)([%w_]+)(%s*=%s*0%s*\n%s*return%s+function%([^)]*%)%s*\n%s*)(%2%s*=%s*%2%s*%+%s*1)', 
+				function(prefix, name, middle, inc)
+					return prefix .. 'count' .. middle .. 'count = count + 1'
+				end)
+			return code
+		end
+
+		local function renameMultiplier(code)
+			code = code:gsub('(local%s+)([%w_]+)(%s*=%s*%([^%)]-%)%s*return%s+function%([^%)]-%))',
+				function(prefix, name, rest)
+					local newRest = rest:gsub('%(([%w_]+)%)', '(factor)')
+					newRest = newRest:gsub('return%s+function%(([%w_]+)%)', 'return function(value)')
+					return prefix .. 'double' .. newRest
+				end)
+			return code
+		end
+
+		local function renameAccumulator(code)
+			code = code:gsub('(local%s+)([%w_]+)(%s*=%s*0%s*\n%s*return%s+function%(([%w_]+)%)%s*\n%s*)(%2%s*=%s*%2%s*%+%s*%([^%)]-%))',
+				function(prefix, name, middle, param, inc)
+					return prefix .. 'total' .. middle .. 'return function(amount)\n    ' .. 
+						inc:gsub(name, 'total'):gsub(param, 'amount'):gsub('or%s+[%w_]+', 'or step')
+				end)
+			return code
+		end
+
+		local function renameRange(code)
+			code = code:gsub('(local%s+)([%w_]+)(%s*=%s*0%s*\n%s*return%s+function%(%)%s*\n%s*)(%2%s*=%s*%2%s*%+%s*1)',
+				function(prefix, name, middle, inc)
+					return prefix .. 'i' .. middle .. 'i = i + 1'
+				end)
+			return code
+		end
+
+		local function enhance(code)
 			code = cleanJunk(code)
+			code = renameMethodSelf(code)
+			code = renameLoopIndices(code)
+			code = renameCounters(code)
+			code = renameMultiplier(code)
+			code = renameAccumulator(code)
+			code = renameRange(code)
 			return code
 		end
 
 		ldecompile = function(script)
 			local raw = baseDecompile(script)
 			if not raw or raw == "" then return raw end
-			return enhanceFunction(raw)
+			return enhance(raw)
 		end
 	end
 	
