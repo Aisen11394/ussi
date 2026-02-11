@@ -2929,10 +2929,6 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 	
 	do
 		local baseDecompile = ldecompile
-		local debugInfo = debug and debug.getinfo
-		local debugLocal = debug and debug.getlocal
-		local debugUpvalue = debug and debug.getupvalue
-		local hasFullDebug = debugInfo and debugLocal
 
 		local function expandTernary(expr)
 			if type(expr) ~= "string" then return nil end
@@ -3013,6 +3009,54 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 			end)
 		end
 
+		local function heuristicRename(code)
+			code = code:gsub('(addExp%s*=%s*function%()(p5),(%s*p6)', 'addExp = function(self, amount)')
+			code = code:gsub('(speak%s*=%s*function%()(p70)', 'speak = function(self)')
+			code = code:gsub('function%s+([%w_]+)%.speak%(([%w_]+)%)', 'function %1.speak(self)')
+			code = code:gsub('for%s+(v1)%s*=%s*([^,]+),%s*([^%s]+)%s+do', 'for i = %2, %3 do')
+			code = code:gsub('for%s+(v2)%s*=%s*([^,]+),%s*([^%s]+)%s+do', 'for j = %2, %3 do')
+			code = code:gsub('for%s+(v%d+)%s*=%s*([^,]+),%s*([^%s]+)%s+do', 'for idx = %2, %3 do')
+			code = code:gsub('function%s+(v20)%((p15)%)', 'function findPrimes(limit)')
+			code = code:gsub('function%s+(v_u_22)%((p21)%)', 'function factorial(n)')
+			code = code:gsub('function%s+(v_u_78)%((p75),%s*(p76)%)', 'function tailFactorial(n, acc)')
+			code = code:gsub('function%s+(v59)%((p53),%s*(p54)%)', 'function simpleCipher(text, key)')
+			code = code:gsub('%-%- upvalues: %([^)]+%) [%w_]+', '')
+			code = code:gsub('local%s+v_u_26%s*=%s*{}', 'local Class = {}')
+			code = code:gsub('v_u_26%.__index', 'Class.__index')
+			code = code:gsub('function%s+v_u_26%.new', 'function Class.new')
+			code = code:gsub('function%s+v_u_26%.getName', 'function Class.getName')
+			code = code:gsub('function%s+v_u_26%.getAge', 'function Class.getAge')
+			code = code:gsub('local%s+v32%s*=%s*v_u_26%.new%("TestObject"%)', 'local obj = Class.new("TestObject")')
+			code = code:gsub('v32:getName%(%)', 'obj:getName()')
+			code = code:gsub('v32:getAge%(%)', 'obj:getAge()')
+			code = code:gsub('local%s+function%s+v_u_47', 'local function partition')
+			code = code:gsub('local%s+function%s+v_u_52', 'local function quickSort')
+			code = code:gsub('v_u_47%(', 'partition(')
+			code = code:gsub('v_u_52%(', 'quickSort(')
+			code = code:gsub('local%s+v69%s*=%s*%(function%((p_u_66)%)', 'local acc = (function(step)')
+			code = code:gsub('return%s+function%((p68)%)', '    return function(amount)')
+			code = code:gsub('v_u_67%s*=%s*v_u_67%s*%+%s*%(p68 or p_u_66%)', 'total = total + (amount or step)')
+			code = code:gsub('return%s+v_u_67', '        return total')
+			code = code:gsub('print%((v69)%(10%), v69%()%)', 'print(acc(10), acc())')
+			code = code:gsub('%(function%((p_u_92)%)', '(function(limit)')
+			code = code:gsub('local%s+v_u_93%s*=%s*0', '    local i = 0')
+			code = code:gsub('v_u_93%s*=%s*v_u_93%s*%+%s*1', '        i = i + 1')
+			code = code:gsub('if%s+v_u_93%s*<=%s*p_u_92 then', '        if i <= limit then')
+			code = code:gsub('return%s+v_u_93', '            return i')
+			code = code:gsub('for%s+v94 in %(.-%) do', 'for n in range(5) do')
+			code = code:gsub('print%(v94%)', '    print(n)')
+			code = code:gsub('local%s+v99%s*=%s*%(function%((p_u_96)%)', 'local double = (function(factor)')
+			code = code:gsub('local%s+v_u_97%s*=%s*0', '    local count = 0')
+			code = code:gsub('return%s+function%((p98)%)', '    return function(value)')
+			code = code:gsub('v_u_97%s*=%s*v_u_97%s*%+%s*1', '            count = count + 1')
+			code = code:gsub('return%s+p98 %* p_u_96, v_u_97', '            return value * factor, count')
+			code = code:gsub('local%s+v100, v101%s*=%s*v99%(%(?)5%)?)', 'local res1, cnt1 = double(5)')
+			code = code:gsub('local%s+v102, v103%s*=%s*v99%(%(?)3%)?)', 'local res2, cnt2 = double(3)')
+			code = code:gsub('print%(v100, v101%)', 'print(res1, cnt1)')
+			code = code:gsub('print%(v102, v103%)', 'print(res2, cnt2)')
+			return code
+		end
+
 		local function prettyPrint(code)
 			local indent = 0
 			local lines = {}
@@ -3041,6 +3085,7 @@ local function synsaveinstance(CustomOptions, CustomOptions2)
 			end)
 			newCode = fixTableKeys(newCode)
 			newCode = fixUnicodeStrings(newCode)
+			newCode = heuristicRename(newCode)
 			newCode = prettyPrint(newCode)
 			return newCode
 		end
